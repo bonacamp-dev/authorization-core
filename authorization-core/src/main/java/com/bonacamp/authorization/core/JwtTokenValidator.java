@@ -2,6 +2,7 @@ package com.bonacamp.authorization.core;
 
 import java.lang.reflect.Array;
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -25,6 +26,7 @@ public class JwtTokenValidator {
 	private static final String CLIENT_SUFFIX = "-i";
 	private static final String CLIENT_KEY = "client_id";
 	private static final String AUTHORITIES_KEY = "user_role";
+	private static final String SERVER_ROLE_KEY = "server_role";
 	private static final String AUTHORIZATION_HEADER = "Authorization";
 	private static final String BEARER_TYPE = "Bearer ";
 	private static final String KEY = "67O064KY7Lqg7ZSELWNvbS1ib25hY2FtcC1hdXRob3JpemF0aW9uLWl0LXRlYW1ib25h";
@@ -36,7 +38,7 @@ public class JwtTokenValidator {
     }
     
     public String verificationToken(HttpServletRequest request) {
-    	
+    	String result = "200";
     	String accessToken = setBearerToken(request);
     	if(isNullOrEmpty(accessToken)) {
     		return "401";
@@ -60,6 +62,35 @@ public class JwtTokenValidator {
     			|| !cid.substring(cid.length()-2, cid.length()).equals(CLIENT_SUFFIX)) {
     		return "401";
         }
+    	
+    	String data = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
+    	if(isNullOrEmpty(data)) {
+    		return "403";
+    	}
+    	
+    	String url = request.getRequestURI();
+    	String method = request.getMethod().equals("GET") ? "read" : "write";
+    	if(data.contains(",")) {
+    		String[] datas = data.split(",");
+    		List<String> svrList= Arrays.asList(datas);
+    		for(String svr : svrList) {
+    			if(url.contains(svr.substring(0, svr.indexOf("."))) 
+					&& method.equals(svr.substring(svr.indexOf(".")+1, svr.length()))) {
+    				return "200";
+    			}
+        	}
+    		result = "444";
+    	}else {
+    		if (url.contains(data.substring(0, data.indexOf("."))) 
+    				&& method.equals(data.substring(data.indexOf(".")+1, data.length()))) {
+    			return "200";
+			}else {
+				return "403";
+			}
+    	}
+    	if(result.equals("444")) {
+    		return "403";
+    	}
     	
     	Long cdate = claims.getExpiration().getTime();
     	Long now = new Date().getTime();
