@@ -74,15 +74,16 @@ public class JwtTokenValidator {
     		String[] datas = data.split(",");
     		List<String> svrList= Arrays.asList(datas);
     		for(String svr : svrList) {
-    			if(url.contains(svr.trim().substring(0, svr.indexOf("."))) 
-					&& method.equals(svr.trim().substring(svr.indexOf(".")+1, svr.length()))) {
+    			svr = svr.trim();
+    			if(url.contains(svr.substring(0, svr.indexOf("."))) 
+					&& method.equals(svr.substring(svr.indexOf(".")+1, svr.length()))) {
     				return "200";
     			}
         	}
     		result = "444";
     	}else {
-    		if (url.contains(data.trim().substring(0, data.indexOf("."))) 
-    				&& method.equals(data.trim().substring(data.indexOf(".")+1, data.length()))) {
+    		if (url.contains(data.substring(0, data.indexOf("."))) 
+    				&& method.equals(data.substring(data.indexOf(".")+1, data.length()))) {
     			return "200";
 			}else {
 				return "403";
