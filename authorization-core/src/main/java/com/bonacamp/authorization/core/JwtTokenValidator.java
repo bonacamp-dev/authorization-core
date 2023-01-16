@@ -30,7 +30,7 @@ public class JwtTokenValidator {
 	private static final String AUTHORIZATION_HEADER = "Authorization";
 	private static final String BEARER_TYPE = "Bearer ";
 	private static final String KEY = "67O064KY7Lqg7ZSELWNvbS1ib25hY2FtcC1hdXRob3JpemF0aW9uLWl0LXRlYW1ib25h";
-    private final Key key;
+    private final Key key; 
     
     public JwtTokenValidator() {
         byte[] keyBytes = Decoders.BASE64.decode(KEY);
