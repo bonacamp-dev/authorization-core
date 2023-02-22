@@ -9,7 +9,8 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
-import io.goodforgod.http.common.HttpStatus;
+import org.springframework.http.HttpStatus;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -41,11 +42,11 @@ public class JwtTokenValidator {
     	String accessToken = setBearerToken(request);
     	
     	if(isNullOrEmpty(accessToken)) {
-    		return HttpStatus.UNAUTHORIZED.code();
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	if(!validateToken(accessToken)) {
-    		return HttpStatus.UNAUTHORIZED.code();
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	Claims claims = parseClaims(accessToken);
@@ -55,18 +56,18 @@ public class JwtTokenValidator {
         clientId = clientId.substring(0, clientId.length()-2);
 
     	if(isNullOrEmpty(rid) || isNullOrEmpty(cid) || isNullOrEmpty(clientId)) {
-    		return HttpStatus.UNAUTHORIZED.code();
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	if (!cid.substring(0,5).equals(CLIENT_PREFIX) 
     			|| !cid.substring(cid.length()-2, cid.length()).equals(CLIENT_SUFFIX)) {
-    		return HttpStatus.UNAUTHORIZED.code();
+    		return HttpStatus.UNAUTHORIZED.value();
         }
     	
     	String serverRoles = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
     	
     	if(isNullOrEmpty(serverRoles)) {
-    		return HttpStatus.FORBIDDEN.code();
+    		return HttpStatus.FORBIDDEN.value();
     	}
     	
     	String url = request.getRequestURI();
@@ -79,15 +80,15 @@ public class JwtTokenValidator {
     			role = role.trim();
     			
     			if(url.contains(role.substring(0, role.indexOf("."))) && method.equals(role.substring(role.indexOf(".")+1, role.length()))) {
-    				return HttpStatus.OK.code();
+    				return HttpStatus.OK.value();
     			}
         	}
-    		return HttpStatus.FORBIDDEN.code();
+    		return HttpStatus.FORBIDDEN.value();
     	}else {
     		if (url.contains(serverRoles.substring(0, serverRoles.indexOf("."))) && method.equals(serverRoles.substring(serverRoles.indexOf(".")+1, serverRoles.length()))) {
-    			return HttpStatus.OK.code();
+    			return HttpStatus.OK.value();
 			}else {
-				return HttpStatus.FORBIDDEN.code();
+				return HttpStatus.FORBIDDEN.value();
 			}
     	}
     }
@@ -179,4 +180,3 @@ public class JwtTokenValidator {
         return false;
     }
 }
- 
