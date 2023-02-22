@@ -10,6 +10,7 @@ version = '0.0.1'
 
 dependencies {
 	
+	implementation 'io.goodforgod:http-common:1.0.0'
 	compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.2'
