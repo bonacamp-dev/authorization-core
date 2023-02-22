@@ -9,8 +9,7 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.networknt.status.HttpStatus;
-
+import io.goodforgod.http.common.HttpStatus;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -42,11 +41,11 @@ public class JwtTokenValidator {
     	String accessToken = setBearerToken(request);
     	
     	if(isNullOrEmpty(accessToken)) {
-    		return HttpStatus.UNAUTHORIZED.value();
+    		return HttpStatus.UNAUTHORIZED.code();
     	}
     	
     	if(!validateToken(accessToken)) {
-    		return HttpStatus.UNAUTHORIZED.value();
+    		return HttpStatus.UNAUTHORIZED.code();
     	}
     	
     	Claims claims = parseClaims(accessToken);
@@ -56,18 +55,18 @@ public class JwtTokenValidator {
         clientId = clientId.substring(0, clientId.length()-2);
 
     	if(isNullOrEmpty(rid) || isNullOrEmpty(cid) || isNullOrEmpty(clientId)) {
-    		return HttpStatus.UNAUTHORIZED.value();
+    		return HttpStatus.UNAUTHORIZED.code();
     	}
     	
     	if (!cid.substring(0,5).equals(CLIENT_PREFIX) 
     			|| !cid.substring(cid.length()-2, cid.length()).equals(CLIENT_SUFFIX)) {
-    		return HttpStatus.UNAUTHORIZED.value();
+    		return HttpStatus.UNAUTHORIZED.code();
         }
     	
     	String serverRoles = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
     	
     	if(isNullOrEmpty(serverRoles)) {
-    		return HttpStatus.FORBIDDEN.value();
+    		return HttpStatus.FORBIDDEN.code();
     	}
     	
     	String url = request.getRequestURI();
@@ -80,15 +79,15 @@ public class JwtTokenValidator {
     			role = role.trim();
     			
     			if(url.contains(role.substring(0, role.indexOf("."))) && method.equals(role.substring(role.indexOf(".")+1, role.length()))) {
-    				return HttpStatus.OK.value();
+    				return HttpStatus.OK.code();
     			}
         	}
-    		return HttpStatus.FORBIDDEN.value();
+    		return HttpStatus.FORBIDDEN.code();
     	}else {
     		if (url.contains(serverRoles.substring(0, serverRoles.indexOf("."))) && method.equals(serverRoles.substring(serverRoles.indexOf(".")+1, serverRoles.length()))) {
-    			return HttpStatus.OK.value();
+    			return HttpStatus.OK.code();
 			}else {
-				return HttpStatus.FORBIDDEN.value();
+				return HttpStatus.FORBIDDEN.code();
 			}
     	}
     }
