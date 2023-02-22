@@ -12,14 +12,16 @@ version = '0.0.1'
 publishing {
     publications {
         mavenJava(MavenPublication) {
-	       	from components.java
+	       	mavenJava(MavenPublication) {
+            	from components.java
+          	}
         }
     }
 }
 
 dependencies {
 	
-	implementation 'com.networknt:status:2.1.7'
+	implementation group: 'com.networknt', name: 'status', version: '2.1.7'
 	compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.2'
