@@ -2,14 +2,14 @@ package com.bonacamp.authorization.core;
 
 import java.lang.reflect.Array;
 import java.security.Key;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.http.HttpStatus;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -37,15 +37,16 @@ public class JwtTokenValidator {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
     
-    public String verificationToken(HttpServletRequest request) {
-    	String result = "200";
+    public Integer verificationToken(HttpServletRequest request) {
+    	
     	String accessToken = setBearerToken(request);
+    	
     	if(isNullOrEmpty(accessToken)) {
-    		return "401";
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	if(!validateToken(accessToken)) {
-    		return "401";
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	Claims claims = parseClaims(accessToken);
@@ -55,52 +56,41 @@ public class JwtTokenValidator {
         clientId = clientId.substring(0, clientId.length()-2);
 
     	if(isNullOrEmpty(rid) || isNullOrEmpty(cid) || isNullOrEmpty(clientId)) {
-    		return "401";
+    		return HttpStatus.UNAUTHORIZED.value();
     	}
     	
     	if (!cid.substring(0,5).equals(CLIENT_PREFIX) 
     			|| !cid.substring(cid.length()-2, cid.length()).equals(CLIENT_SUFFIX)) {
-    		return "401";
+    		return HttpStatus.UNAUTHORIZED.value();
         }
     	
-    	String data = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
-    	if(isNullOrEmpty(data)) {
-    		return "403";
+    	String serverRoles = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
+    	
+    	if(isNullOrEmpty(serverRoles)) {
+    		return HttpStatus.FORBIDDEN.value();
     	}
     	
     	String url = request.getRequestURI();
     	String method = request.getMethod().equals("GET") ? "read" : "write";
-    	if(data.contains(",")) {
-    		String[] datas = data.split(",");
-    		List<String> svrList= Arrays.asList(datas);
-    		for(String svr : svrList) {
-    			svr = svr.trim();
-    			if(url.contains(svr.substring(0, svr.indexOf("."))) 
-					&& method.equals(svr.substring(svr.indexOf(".")+1, svr.length()))) {
-    				return "200";
+    	
+    	if(serverRoles.contains(",")) {
+    		String[] datas = serverRoles.split(",");
+    		
+    		for(String role : datas) {
+    			role = role.trim();
+    			
+    			if(url.contains(role.substring(0, role.indexOf("."))) && method.equals(role.substring(role.indexOf(".")+1, role.length()))) {
+    				return HttpStatus.OK.value();
     			}
         	}
-    		result = "444";
+    		return HttpStatus.FORBIDDEN.value();
     	}else {
-    		if (url.contains(data.substring(0, data.indexOf("."))) 
-    				&& method.equals(data.substring(data.indexOf(".")+1, data.length()))) {
-    			return "200";
+    		if (url.contains(serverRoles.substring(0, serverRoles.indexOf("."))) && method.equals(serverRoles.substring(serverRoles.indexOf(".")+1, serverRoles.length()))) {
+    			return HttpStatus.OK.value();
 			}else {
-				return "403";
+				return HttpStatus.FORBIDDEN.value();
 			}
     	}
-    	if(result.equals("444")) {
-    		return "403";
-    	}
-    	
-    	Long cdate = claims.getExpiration().getTime();
-    	Long now = new Date().getTime();
-
-    	if(now >= cdate) {
-    		return "403";
-    	}
-    	
-    	return "200";
     }
 
     private String setBearerToken(HttpServletRequest request) {
@@ -190,4 +180,3 @@ public class JwtTokenValidator {
         return false;
     }
 }
- 
