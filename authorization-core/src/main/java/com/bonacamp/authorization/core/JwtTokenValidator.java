@@ -37,7 +37,7 @@ public class JwtTokenValidator {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
     
-    public Integer verificationToken(HttpServletRequest request) {
+    public Integer verificationToken(HttpServletRequest request) { 
     	
     	String accessToken = setBearerToken(request);
     	
