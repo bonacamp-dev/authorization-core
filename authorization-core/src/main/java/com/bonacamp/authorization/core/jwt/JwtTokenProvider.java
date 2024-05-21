@@ -118,7 +118,7 @@ public class JwtTokenProvider {
     	
     	role = role.trim();
     	String roleId = getRoleId(role);
-    	MethodType.of(roleId).getValue().toLowerCase();
+    	
 
     	return url.contains(role.substring(0, role.indexOf("."))) && method.equals(roleId);
     	
