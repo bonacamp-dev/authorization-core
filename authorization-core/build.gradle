@@ -8,18 +8,18 @@ buildscript {
     }
 
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.7.0")
     }
 }
 
 plugins {
     id 'java-library'
 	id 'maven-publish'
+	id 'java'
 }
 
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
-apply plugin: 'java'
 apply plugin: 'eclipse'
 
 
@@ -27,7 +27,7 @@ repositories {
     mavenCentral()
 }
 
-version = '2.0.5'
+version = '2.0.6'
 
 publishing {
     publications {
