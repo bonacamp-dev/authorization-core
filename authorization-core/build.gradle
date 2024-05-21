@@ -27,7 +27,17 @@ repositories {
     mavenCentral()
 }
 
-version = '2.0.7'
+
+
+bootJar {
+        enabled = false
+    }
+
+jar {
+    enabled = true
+}
+
+version = '2.0.8'
 
 publishing {
     publications {
