@@ -1,17 +1,33 @@
+buildscript {
+    ext {
+        springBootVersion = '2.7.0'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
 plugins {
     id 'java-library'
-    id 'maven-publish'
+	id 'maven-publish'
 }
 
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'java'
+apply plugin: 'eclipse'
+
 
 repositories {
     mavenCentral()
 }
 
-version = '2.0.2'
+version = '2.0.3'
 
 publishing {
     publications {
@@ -28,6 +44,8 @@ processResources {
 }
 
 dependencies {
+
+	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4'
 
 	implementation 'org.springframework.boot:spring-boot-starter-web:2.5.5'
 	compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
