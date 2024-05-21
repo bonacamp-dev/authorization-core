@@ -13,7 +13,7 @@ import org.json.simple.parser.JSONParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import com.bonacamp.authorization.core.redis.service.MethodType;
+
 import com.bonacamp.authorization.core.redis.service.RedisService;
 import com.bonacamp.authorization.core.util.CustomUtils;
 import com.bonacamp.authorization.core.util.StringUtils;
