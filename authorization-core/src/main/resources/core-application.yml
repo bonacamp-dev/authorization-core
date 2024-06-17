@@ -1,6 +1,5 @@
 server:
-  key: dionysos-authorization
-  port: 8080
+  jasyptKey: dionysos-authorization
 
 spring:
   redis:

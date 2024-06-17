@@ -51,7 +51,7 @@ publishing {
 }
 
 processResources {
-    filesMatching('**/application**.yml') {
+    filesMatching('**/core-application.yml') {
         expand(project.properties)
     }
 }
