@@ -1,12 +1,13 @@
 server:
   key: dionysos-authorization
+  port: 8080
 
 spring:
   redis:
-    host: ENC(mZtA6lOx64377hYMEG/8UTAvWwGzNFRe)
+    host: ENC(/QOaz1LAkTBggUDDlSybyz8zbuXq3Ukr)
     port: 6379
-    password: ENC(X/6Ryyy/f44DwPVBWMBg+rABL9RCxZKe)
-    
+    password: ENC(7EOZn1pkXFXEzuY/jyCpI8xKZHcW2lOC)
+    #개발/운영 따로 반영 필요
 jasypt:
   encryptor:
     bean: jasyptStringEncryptor

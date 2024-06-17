@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 buildscript {
     ext {
         springBootVersion = '2.7.0'
@@ -8,14 +10,14 @@ buildscript {
     }
 
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.7.0")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
     }
 }
 
 plugins {
     id 'java-library'
-	id 'maven-publish'
-	id 'java'
+    id 'maven-publish'
+    id 'java'
 }
 
 apply plugin: 'org.springframework.boot'
@@ -30,43 +32,55 @@ repositories {
 
 
 bootJar {
-        enabled = false
-    }
+    enabled = false
+}
 
 jar {
     enabled = true
 }
 
-version = '2.1.0'
+version = '2.1.1'
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-    		from components.java
+            from components.java
         }
     }
 }
 
 processResources {
-	filesMatching('**/application**.yml') {
-		expand(project.properties)
-	}
+    filesMatching('**/application**.yml') {
+        expand(project.properties)
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom SpringBootPlugin.BOM_COORDINATES
+    }
 }
 
 dependencies {
 
-	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4'
+    implementation('org.springframework.boot:spring-boot-starter-web') {
+        exclude module: 'spring-boot-starter-tomcat'
+    }
 
-	implementation 'org.springframework.boot:spring-boot-starter-web:2.5.5'
-	compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
-	implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
-	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.2'
-	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.2'
-	
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-	implementation("commons-codec:commons-codec:1.15")
-	implementation("com.googlecode.json-simple:json-simple:1.1.1")
-	implementation 'org.apache.commons:commons-lang3:3.12.0'
+    compileOnly 'javax.servlet:javax.servlet-api:3.0.1'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.2'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.2'
+
+    implementation("commons-codec:commons-codec:1.15")
+    implementation("com.googlecode.json-simple:json-simple:1.1.1")
+
+    implementation 'org.springframework.boot:spring-boot-starter-undertow'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.4'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
