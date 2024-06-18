@@ -1,6 +1,5 @@
 package com.bonacamp.authorization.core.configuration;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -8,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * System 환경 설정
  */
 @Configuration
-public class AppConfig implements WebMvcConfigurer {
+public class AuthorizationCoreConfig implements WebMvcConfigurer {
     /**
      * REDIS 개발
      */
