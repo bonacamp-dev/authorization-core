@@ -1,9 +1,0 @@
-spring:
-  redis:
-    host: "172.27.235.104"
-    port: 6379
-    password: "root1234"
-    #개발/운영 따로 반영 필요
-jasypt:
-  encryptor:
-    bean: jasyptStringEncryptor
