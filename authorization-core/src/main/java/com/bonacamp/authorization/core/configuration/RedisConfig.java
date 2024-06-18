@@ -23,14 +23,9 @@ public class RedisConfig {
     public RedisConnectionFactory redisConnectionFactory() {
 
         RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
-        /*
-        redisStandaloneConfiguration.setHostName(redisProperties.getHost());
-        redisStandaloneConfiguration.setPort(redisProperties.getPort());
-        redisStandaloneConfiguration.setPassword(redisProperties.getPassword());
-         */
-        redisStandaloneConfiguration.setHostName("172.27.235.104");
-        redisStandaloneConfiguration.setPort(6379);
-        redisStandaloneConfiguration.setPassword("root1234");
+        redisStandaloneConfiguration.setHostName(AppConfig.HOST_NAME);
+        redisStandaloneConfiguration.setPort(AppConfig.PORT);
+        redisStandaloneConfiguration.setPassword(AppConfig.PASSWORD);
 
         return new LettuceConnectionFactory(redisStandaloneConfiguration);
     }

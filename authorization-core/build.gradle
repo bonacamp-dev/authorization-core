@@ -29,8 +29,6 @@ repositories {
     mavenCentral()
 }
 
-
-
 bootJar {
     enabled = false
 }
@@ -40,7 +38,7 @@ jar {
     archiveClassifier = ''
 }
 
-version = '2.1.5'
+version = '2.1.6'
 
 publishing {
     publications {
@@ -49,8 +47,6 @@ publishing {
         }
     }
 }
-
-
 
 dependencyManagement {
     imports {

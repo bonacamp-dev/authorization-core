@@ -155,9 +155,6 @@ public class JwtTokenProvider {
 
 	private boolean validateRedis(String accessToken) {
 
-		System.out.println("accessToken : " + accessToken);
-		System.out.println("redisService.getValue(accessToken) : " + redisService.getValue(accessToken));
-
 		if(CustomUtils.isNullOrEmpty(redisService.getValue(accessToken))) {
 			return false;
 		}
