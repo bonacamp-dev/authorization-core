@@ -1,8 +1,6 @@
 package com.bonacamp.authorization.core.jwt;
 
 import com.bonacamp.authorization.core.redis.service.RedisService;
-import com.bonacamp.authorization.core.util.CustomUtils;
-import com.bonacamp.authorization.core.util.StringUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -10,15 +8,12 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import java.security.Key;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -29,6 +24,7 @@ public class JwtTokenProvider {
 	private static final String CLIENT_PREFIX = "bona-";
 	private static final String CLIENT_SUFFIX = "-i";
 	private static final String CLIENT_KEY = "client_id";
+	private static final String AUTHORITIES_KEY = "user_role";
 	private static final String SERVER_ROLE_KEY = "server_role";
 	private static final String AUTHORIZATION_HEADER = "Authorization";
 	private static final String BEARER_TYPE = "Bearer ";
@@ -41,24 +37,25 @@ public class JwtTokenProvider {
 	public Integer verificationToken(HttpServletRequest request, String serverCode) throws Exception {
 		initializeKey();
 		String accessToken = extractBearerToken(request);
+		if (accessToken == null || !validateToken(accessToken) || !isTokenValidInRedis(accessToken)) {
+			return HttpStatus.UNAUTHORIZED.value();
+		}
 
-		if (accessToken == null) { return HttpStatus.BAD_REQUEST.value(); }
-		if (!validateToken(accessToken)) { return HttpStatus.UNAUTHORIZED.value(); }
-		if (!isTokenInRedis(accessToken))  { return HttpStatus.NOT_FOUND.value(); }
-		if (!isAuthorizedServer(accessToken, serverCode)) { return HttpStatus.FORBIDDEN.value(); }
+		if (!isAuthorizedServer(accessToken, serverCode)) {
+			return HttpStatus.FORBIDDEN.value();
+		}
 
 		Claims claims = parseClaims(accessToken);
-		String clientId = getClientId(claims);
-
-		if (clientId == null || !isValidClientId(clientId)) { return HttpStatus.UNAUTHORIZED.value(); }
+		if (!areClaimsValid(claims)) {
+			return HttpStatus.UNAUTHORIZED.value();
+		}
 
 		String serverRoles = extractServerRoles(claims);
-		if (serverRoles == null) { return HttpStatus.FORBIDDEN.value(); }
+		if (serverRoles == null) {
+			return HttpStatus.FORBIDDEN.value();
+		}
 
-		String url = request.getRequestURI();
-		String method = getRequestMethod(request);
-
-		return isRoleAuthorized(serverRoles, url, method) ? HttpStatus.OK.value() : HttpStatus.FORBIDDEN.value();
+		return isRoleAuthorized(serverRoles, request.getRequestURI(), request.getMethod()) ? HttpStatus.OK.value() : HttpStatus.FORBIDDEN.value();
 	}
 
 	private void initializeKey() {
@@ -68,8 +65,7 @@ public class JwtTokenProvider {
 
 	private String extractBearerToken(HttpServletRequest request) {
 		String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-		return (!CustomUtils.isNullOrEmpty(bearerToken) && bearerToken.startsWith(BEARER_TYPE)) ?
-				bearerToken.substring(BEARER_TYPE.length()) : null;
+		return (bearerToken != null && bearerToken.startsWith(BEARER_TYPE)) ? bearerToken.substring(BEARER_TYPE.length()) : null;
 	}
 
 	private boolean validateToken(String token) {
@@ -81,24 +77,18 @@ public class JwtTokenProvider {
 		}
 	}
 
-	private boolean isTokenInRedis(String accessToken) {
-		return !CustomUtils.isNullOrEmpty(redisService.getValue(accessToken));
+	private boolean isTokenValidInRedis(String accessToken) {
+		return redisService.getValue(accessToken) != null;
 	}
 
-	private boolean isAuthorizedServer(String accessToken, String serverCode) throws Exception {
-		List<String> serverCodes = getServerCodes(redisService.getValue(accessToken));
+	private boolean isAuthorizedServer(String accessToken, String serverCode) {
+		List<String> serverCodes = extractServerCodesFromToken(accessToken);
 		return serverCodes.contains(serverCode);
 	}
 
-	private List<String> getServerCodes(Object accessToken) throws Exception {
-		JSONArray jsonArray = (JSONArray) new JSONParser().parse(StringUtils.writeValueAsString(accessToken));
-		List<String> serverCodes = new ArrayList<>();
-
-		for (Object obj : jsonArray) {
-			JSONObject jsonObject = (JSONObject) obj;
-			serverCodes.add((String) jsonObject.get(SERVERCODE));
-		}
-		return serverCodes;
+	private List<String> extractServerCodesFromToken(String accessToken) {
+		Object objAccessToken = redisService.getValue(accessToken);
+		return (List<String>) objAccessToken;
 	}
 
 	private Claims parseClaims(String token) {
@@ -109,36 +99,27 @@ public class JwtTokenProvider {
 		}
 	}
 
-	private String getClientId(Claims claims) {
+	private boolean areClaimsValid(Claims claims) {
 		String cid = new String(Decoders.BASE64.decode(claims.get(CLIENT_KEY).toString()));
-		return CustomUtils.isNullOrEmpty(cid) ? null : cid.substring(5, cid.length() - 2);
+		String clientId = cid.substring(5, cid.length() - 2);
+		return claims.get(AUTHORITIES_KEY) != null && isClientIdValid(cid, clientId);
 	}
 
-	private boolean isValidClientId(String clientId) {
-		return clientId.startsWith(CLIENT_PREFIX) && clientId.endsWith(CLIENT_SUFFIX);
+	private boolean isClientIdValid(String cid, String clientId) {
+		return cid.startsWith(CLIENT_PREFIX) && cid.endsWith(CLIENT_SUFFIX) && clientId != null;
 	}
 
 	private String extractServerRoles(Claims claims) {
-		Object serverRoleObj = claims.get(SERVER_ROLE_KEY);
-		return serverRoleObj != null ? serverRoleObj.toString().replace("[", "").replace("]", "") : null;
-	}
-
-	private String getRequestMethod(HttpServletRequest request) {
-		return request.getMethod().equals("GET") ? "read" : "write";
+		Object serverRolesObj = claims.get(SERVER_ROLE_KEY);
+		return serverRolesObj != null ? serverRolesObj.toString().replace("[", "").replace("]", "") : null;
 	}
 
 	private boolean isRoleAuthorized(String serverRoles, String url, String method) {
-		for (String role : serverRoles.split(",")) {
-			if (isRoleValid(role.trim(), url, method)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private boolean isRoleValid(String role, String url, String method) {
-		String roleId = role.substring(role.indexOf(".") + 1);
-		return url.contains(role.substring(0, role.indexOf("."))) && method.equals(roleId);
+		String[] roles = serverRoles.split(",");
+		String httpMethod = method.equals("GET") ? "read" : "write";
+		return Arrays.stream(roles)
+				.map(String::trim)
+				.anyMatch(role -> url.contains(role.split("\\.")[0]) && httpMethod.equals(role.split("\\.")[1]));
 	}
 }
  
