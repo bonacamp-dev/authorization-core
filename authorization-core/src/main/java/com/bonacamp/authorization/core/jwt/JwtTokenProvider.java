@@ -1,18 +1,21 @@
 package com.bonacamp.authorization.core.jwt;
 
 import com.bonacamp.authorization.core.redis.service.RedisService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
+import com.bonacamp.authorization.core.util.CustomUtils;
+import com.bonacamp.authorization.core.util.StringUtils;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import java.security.Key;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -35,91 +38,164 @@ public class JwtTokenProvider {
 	private Key key;
 
 	public Integer verificationToken(HttpServletRequest request, String serverCode) throws Exception {
-		initializeKey();
-		String accessToken = extractBearerToken(request);
-		if (accessToken == null || !validateToken(accessToken) || !isTokenValidInRedis(accessToken)) {
+
+		byte[] keyBytes = Decoders.BASE64.decode(KEY);
+		this.key = Keys.hmacShaKeyFor(keyBytes);
+
+		String accessToken = setBearerToken(request);
+
+		if(CustomUtils.isNullOrEmpty(accessToken)) {
+			return HttpStatus.BAD_REQUEST.value();
+		}
+
+		if(!validateToken(accessToken)) {
 			return HttpStatus.UNAUTHORIZED.value();
 		}
 
-		if (!isAuthorizedServer(accessToken, serverCode)) {
+		if(!validateRedis(accessToken)) {
+			return HttpStatus.NOT_FOUND.value();
+		}
+
+		if(!authorizationServer(accessToken, serverCode)) {
 			return HttpStatus.FORBIDDEN.value();
 		}
 
 		Claims claims = parseClaims(accessToken);
-		if (!areClaimsValid(claims)) {
+		Object rid = claims.get(AUTHORITIES_KEY);
+		String cid = new String(Decoders.BASE64.decode(claims.get(CLIENT_KEY).toString()));
+		String clientId = cid.substring(5);
+		clientId = clientId.substring(0, clientId.length()-2);
+
+		if(CustomUtils.isNullOrEmpty(rid) || CustomUtils.isNullOrEmpty(cid) || CustomUtils.isNullOrEmpty(clientId)) {
 			return HttpStatus.UNAUTHORIZED.value();
 		}
 
-		String serverRoles = extractServerRoles(claims);
-		if (serverRoles == null) {
+		if (!cid.substring(0,5).equals(CLIENT_PREFIX) || !cid.substring(cid.length()-2, cid.length()).equals(CLIENT_SUFFIX)) {
+			return HttpStatus.UNAUTHORIZED.value();
+		}
+
+		String serverRoles = claims.get(SERVER_ROLE_KEY).toString().replace("[", "").replace("]", "");
+
+		if(CustomUtils.isNullOrEmpty(serverRoles)) {
 			return HttpStatus.FORBIDDEN.value();
 		}
 
-		return isRoleAuthorized(serverRoles, request.getRequestURI(), request.getMethod()) ? HttpStatus.OK.value() : HttpStatus.FORBIDDEN.value();
-	}
+		String url = request.getRequestURI();
+		String method = request.getMethod().equals("GET") ? "read" : "write";
 
-	private void initializeKey() {
-		byte[] keyBytes = Decoders.BASE64.decode(KEY);
-		this.key = Keys.hmacShaKeyFor(keyBytes);
-	}
+		if(serverRoles.contains(",")) {
 
-	private String extractBearerToken(HttpServletRequest request) {
-		String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-		return (bearerToken != null && bearerToken.startsWith(BEARER_TYPE)) ? bearerToken.substring(BEARER_TYPE.length()) : null;
-	}
+			String[] datas = serverRoles.split(",");
 
-	private boolean validateToken(String token) {
-		try {
-			Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-			return true;
-		} catch (JwtException e) {
-			return false;
+			for(String role : datas) {
+
+				if(checkServerRole(role, url, method)) {
+					return HttpStatus.OK.value();
+				}
+			}
+			return HttpStatus.FORBIDDEN.value();
+
+		}else {
+
+			if(checkServerRole(serverRoles, url, method)) {
+				return HttpStatus.OK.value();
+			}
+			return HttpStatus.FORBIDDEN.value();
+
 		}
 	}
 
-	private boolean isTokenValidInRedis(String accessToken) {
-		return redisService.getValue(accessToken) != null;
+	private Boolean checkServerRole(String role, String url, String method) {
+
+		role = role.trim();
+		String roleId = getRoleId(role);
+
+
+		return url.contains(role.substring(0, role.indexOf("."))) && method.equals(roleId);
+
 	}
 
-	private boolean isAuthorizedServer(String accessToken, String serverCode) {
-		List<String> serverCodes = extractServerCodesFromToken(accessToken);
+	private String getRoleId(String role) {
+
+		return role.substring(role.indexOf(".") + 1, role.length());
+
+	}
+
+
+	private String setBearerToken(HttpServletRequest request) {
+
+		String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+
+		if (!CustomUtils.isNullOrEmpty(bearerToken) && bearerToken.startsWith(BEARER_TYPE)) {
+			return bearerToken.substring(BEARER_TYPE.length());
+		}
+
+		return null;
+	}
+
+	private boolean validateToken(String token) {
+
+		try {
+			Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+			return true;
+		}
+		catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
+		}
+		catch (ExpiredJwtException e) {
+		}
+		catch (UnsupportedJwtException e) {
+		}
+		catch (IllegalArgumentException e) {
+		}
+		catch (JwtException e) {
+		}
+
+		return false;
+	}
+
+	private boolean validateRedis(String accessToken) {
+
+		if(CustomUtils.isNullOrEmpty(redisService.getValue(accessToken))) {
+			return false;
+		}
+
+		return true;
+
+	}
+
+	private boolean authorizationServer(String accessToken, String serverCode) throws Exception {
+
+		List<String> serverCodes = getServerCode(redisService.getValue(accessToken));
 		return serverCodes.contains(serverCode);
 	}
 
-	private List<String> extractServerCodesFromToken(String accessToken) {
-		Object objAccessToken = redisService.getValue(accessToken);
-		return (List<String>) objAccessToken;
+	private List<String> getServerCode(Object objAccessToken) throws Exception {
+
+		List<String> serverCodes = new ArrayList<>();
+
+		List<Object> objectLists = Arrays.asList(new JSONParser().parse(StringUtils.writeValueAsString(objAccessToken)));
+
+		JSONParser jsonParse = new JSONParser();
+		JSONArray jsonArray = (JSONArray)jsonParse.parse((String) objectLists.get(0));
+
+		for (int i = 0; i < jsonArray.size(); ++i) {
+			JSONObject jsonObject = (JSONObject) jsonArray.get(i);
+			String serverCode = (String) jsonObject.get(SERVERCODE);
+			serverCodes.add(serverCode);
+		}
+
+		return serverCodes;
 	}
 
 	private Claims parseClaims(String token) {
+
 		try {
 			return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-		} catch (ExpiredJwtException e) {
+		}
+		catch (ExpiredJwtException e) {
 			return e.getClaims();
 		}
 	}
 
-	private boolean areClaimsValid(Claims claims) {
-		String cid = new String(Decoders.BASE64.decode(claims.get(CLIENT_KEY).toString()));
-		String clientId = cid.substring(5, cid.length() - 2);
-		return claims.get(AUTHORITIES_KEY) != null && isClientIdValid(cid, clientId);
-	}
-
-	private boolean isClientIdValid(String cid, String clientId) {
-		return cid.startsWith(CLIENT_PREFIX) && cid.endsWith(CLIENT_SUFFIX) && clientId != null;
-	}
-
-	private String extractServerRoles(Claims claims) {
-		Object serverRolesObj = claims.get(SERVER_ROLE_KEY);
-		return serverRolesObj != null ? serverRolesObj.toString().replace("[", "").replace("]", "") : null;
-	}
-
-	private boolean isRoleAuthorized(String serverRoles, String url, String method) {
-		String[] roles = serverRoles.split(",");
-		String httpMethod = method.equals("GET") ? "read" : "write";
-		return Arrays.stream(roles)
-				.map(String::trim)
-				.anyMatch(role -> url.contains(role.split("\\.")[0]) && httpMethod.equals(role.split("\\.")[1]));
-	}
 }
  
