@@ -1,13 +1,12 @@
 package com.bonacamp.authorization.core.redis.service;
 
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
