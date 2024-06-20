@@ -39,8 +39,7 @@ public class JwtTokenProvider {
 
 	public Integer verificationToken(HttpServletRequest request, String serverCode) throws Exception {
 
-		byte[] keyBytes = Decoders.BASE64.decode(KEY);
-		this.key = Keys.hmacShaKeyFor(keyBytes);
+		initializeKey();
 
 		String accessToken = setBearerToken(request);
 
@@ -103,6 +102,11 @@ public class JwtTokenProvider {
 			return HttpStatus.FORBIDDEN.value();
 
 		}
+	}
+
+	private void initializeKey() {
+		byte[] keyBytes = Decoders.BASE64.decode(KEY);
+		this.key = Keys.hmacShaKeyFor(keyBytes);
 	}
 
 	private Boolean checkServerRole(String role, String url, String method) {
